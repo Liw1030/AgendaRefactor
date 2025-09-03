@@ -13,7 +13,7 @@ public class InterfazAgenda extends JFrame {
     private final DefaultListModel<Contacto> modelo = new DefaultListModel<>();
     private final JList<Contacto> lista = new JList<>(modelo);
     private final JTextField tfNombre = new JTextField(10), tfApellido = new JTextField(10),
-            tfTelefono = new JTextField(8), tfNuevo = new JTextField(8);
+            tfTelefono = new JTextField(8);
 
     private static class RoundedButton extends JButton {
         private final int arc = 20;
@@ -32,7 +32,7 @@ public class InterfazAgenda extends JFrame {
             g2.setColor(getBackground());
             g2.fillRoundRect(0, 0, getWidth(), getHeight(), arc, arc);
             g2.setColor(getBackground().darker());
-            g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, arc, arc);
+            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, arc, arc);
             g2.dispose();
             super.paintComponent(g);
         }
@@ -46,7 +46,7 @@ public class InterfazAgenda extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(6,6));
 
-        // NORTH: campos + botones
+        // NORTH: campos + botones Añadir y Eliminar
         JPanel northPanel = new JPanel(new BorderLayout(4,4));
 
         JPanel camposPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
@@ -57,9 +57,8 @@ public class InterfazAgenda extends JFrame {
         JPanel botonesPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 6));
         RoundedButton bAdd = new RoundedButton("Añadir");
         RoundedButton bDel = new RoundedButton("Eliminar");
-        RoundedButton bMod = new RoundedButton("Modificar");
-        RoundedButton bBuscar = new RoundedButton("Buscar");
-        botonesPanel.add(bAdd); botonesPanel.add(bDel); botonesPanel.add(bMod); botonesPanel.add(bBuscar);
+        botonesPanel.add(bAdd);
+        botonesPanel.add(bDel);
 
         northPanel.add(camposPanel, BorderLayout.NORTH);
         northPanel.add(botonesPanel, BorderLayout.SOUTH);
@@ -69,20 +68,22 @@ public class InterfazAgenda extends JFrame {
         lista.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         add(new JScrollPane(lista), BorderLayout.CENTER);
 
-        // SOUTH: acciones auxiliares centradas
+        // SOUTH: botones auxiliares + Modificar y Buscar en una sola línea
         JPanel bot = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 6));
-        bot.add(new JLabel("Nuevo tel:"));
-        bot.add(tfNuevo);
-
         RoundedButton bExiste = new RoundedButton("Existe?");
         RoundedButton bEsp = new RoundedButton("Espacios");
         RoundedButton bDemo = new RoundedButton("Demo");
         RoundedButton bLimpiar = new RoundedButton("Limpiar");
+        RoundedButton bMod = new RoundedButton("Modificar");
+        RoundedButton bBuscar = new RoundedButton("Buscar");
 
         bot.add(bExiste);
         bot.add(bEsp);
         bot.add(bDemo);
         bot.add(bLimpiar);
+        bot.add(bMod);
+        bot.add(bBuscar);
+
         add(bot, BorderLayout.SOUTH);
 
         // ---- Acciones ----
@@ -90,7 +91,7 @@ public class InterfazAgenda extends JFrame {
             String n = tfNombre.getText().trim(), a = tfApellido.getText().trim(), t = tfTelefono.getText().trim();
             if (n.isEmpty() || a.isEmpty() || t.isEmpty()) { JOptionPane.showMessageDialog(this, "Complete los campos."); return; }
             if (agenda.agendaLlena()) { JOptionPane.showMessageDialog(this, "Agenda llena."); return; }
-//            if (agenda.existeContacto(n, a, t)) { JOptionPane.showMessageDialog(this, "Ya existe el contacto con ese teléfono."); return; }
+            if (agenda.existeContacto(n, a, t)) { JOptionPane.showMessageDialog(this, "Ya existe el contacto con ese teléfono."); return; }
             try { agenda.anadirContacto(new Contacto(n, a, t)); actualizar(); limpiar(); }
             catch (IllegalArgumentException ex) { JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage()); }
         });
@@ -99,51 +100,57 @@ public class InterfazAgenda extends JFrame {
             Contacto sel = lista.getSelectedValue();
             String n, a;
 
-            if (sel != null) {
-                n = sel.getNombre();
-                a = sel.getApellido();
-            } else {
-                n = tfNombre.getText().trim();
-                a = tfApellido.getText().trim();
-                if (n.isEmpty() || a.isEmpty()) {
-                    JOptionPane.showMessageDialog(this, "Seleccione un contacto o ingrese nombre+apellido.");
-                    return;
-                }
+            if (sel != null) { n = sel.getNombre(); a = sel.getApellido(); }
+            else {
+                n = tfNombre.getText().trim(); a = tfApellido.getText().trim();
+                if (n.isEmpty() || a.isEmpty()) { JOptionPane.showMessageDialog(this, "Seleccione un contacto o ingrese nombre+apellido."); return; }
             }
 
-            // Confirmación antes de eliminar
             int opcion = JOptionPane.showConfirmDialog(this,
                     "¿Está seguro de eliminar el contacto: " + n + " " + a + "?",
                     "Confirmar eliminación",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE);
 
-            if (opcion == JOptionPane.YES_OPTION) {
-                agenda.eliminarContacto(n, a);
-                actualizar();
-            }
+            if (opcion == JOptionPane.YES_OPTION) { agenda.eliminarContacto(n, a); actualizar(); }
         });
 
+        // ---- Modificar con modal ----
         bMod.addActionListener(e -> {
-            String n = tfNombre.getText().trim(), a = tfApellido.getText().trim(), t = tfNuevo.getText().trim();
-            if (n.isEmpty() || a.isEmpty() || t.isEmpty()) { JOptionPane.showMessageDialog(this, "Complete nombre, apellido y nuevo teléfono."); return; }
-            agenda.modificarTelefono(n, a, t);
+            String n = tfNombre.getText().trim();
+            String a = tfApellido.getText().trim();
+
+            if (n.isEmpty() || a.isEmpty()) { JOptionPane.showMessageDialog(this, "Complete nombre y apellido del contacto a modificar."); return; }
+
+            Contacto sel = null;
+            for (Contacto c : agenda.obtenerContactos()) {
+                if (Contacto.normalizarTexto(c.getNombre()).equals(Contacto.normalizarTexto(n)) &&
+                        Contacto.normalizarTexto(c.getApellido()).equals(Contacto.normalizarTexto(a))) {
+                    sel = c; break;
+                }
+            }
+
+            if (sel == null) { JOptionPane.showMessageDialog(this, "Contacto no encontrado."); return; }
+
+            String nuevoTel = JOptionPane.showInputDialog(this,
+                    "Ingrese el nuevo teléfono para " + n + " " + a + ":",
+                    sel.getTelefono());
+            if (nuevoTel == null || nuevoTel.trim().isEmpty()) { JOptionPane.showMessageDialog(this, "Modificación cancelada o teléfono vacío."); return; }
+
+            agenda.modificarTelefono(n, a, nuevoTel.trim());
             actualizar();
         });
 
         bExiste.addActionListener(e -> {
             String n = tfNombre.getText().trim();
             String a = tfApellido.getText().trim();
-            String t = tfTelefono.getText().trim(); // <-- agregamos teléfono
-            if (n.isEmpty() || a.isEmpty() || t.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Nombre, apellido y teléfono requeridos.");
-                return;
-            }
+            String t = tfTelefono.getText().trim();
 
-            boolean existe = agenda.existeContacto(n, a, t); // <-- usamos tu método
+            if (n.isEmpty() || a.isEmpty() || t.isEmpty()) { JOptionPane.showMessageDialog(this, "Nombre, apellido y teléfono requeridos."); return; }
+
+            boolean existe = agenda.existeContacto(n, a, t);
             JOptionPane.showMessageDialog(this, existe ? "Ya existe" : "No existe");
         });
-
 
         bEsp.addActionListener(e -> JOptionPane.showMessageDialog(this, "Espacios libres: " + agenda.espaciosLibres()));
 
@@ -158,7 +165,6 @@ public class InterfazAgenda extends JFrame {
         // ---- Estética ----
         bAdd.setBackground(new Color(46, 204, 113)); bAdd.setForeground(Color.WHITE);
         bDel.setBackground(new Color(231, 76, 60)); bDel.setForeground(Color.WHITE);
-
         Color azul = new Color(52, 152, 219);
         bMod.setBackground(azul); bMod.setForeground(Color.WHITE);
         bBuscar.setBackground(azul); bBuscar.setForeground(Color.WHITE);
@@ -173,21 +179,15 @@ public class InterfazAgenda extends JFrame {
         // ---- Buscar ----
         bBuscar.addActionListener(e -> {
             String[] opciones = {"Nombre", "Apellido", "Teléfono"};
-            int sel = JOptionPane.showOptionDialog(this,
-                    "Seleccione el campo para buscar:",
-                    "Buscar",
-                    JOptionPane.DEFAULT_OPTION,
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    opciones,
-                    opciones[0]);
+            int sel = JOptionPane.showOptionDialog(this, "Seleccione el campo para buscar:", "Buscar",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, opciones, opciones[0]);
             if (sel == JOptionPane.CLOSED_OPTION || sel < 0) return;
+
             String campo = sel == 0 ? "nombre" : sel == 1 ? "apellido" : "telefono";
             String valor = JOptionPane.showInputDialog(this, "Ingrese " + opciones[sel] + ":");
             if (valor == null || valor.trim().isEmpty()) { JOptionPane.showMessageDialog(this, "Valor vacío. Cancelado."); return; }
 
-            agenda.buscarContacto(campo, valor);
-            java.util.List<Contacto> encontrados = new java.util.ArrayList<>();
+            List<Contacto> encontrados = new java.util.ArrayList<>();
             String vNorm = "telefono".equalsIgnoreCase(campo) ? valor.trim() : Contacto.normalizarTexto(valor);
             for (Contacto c : agenda.obtenerContactos()) {
                 if ("nombre".equalsIgnoreCase(campo) && Contacto.normalizarTexto(c.getNombre()).equals(vNorm)) encontrados.add(c);
@@ -219,15 +219,15 @@ public class InterfazAgenda extends JFrame {
     private void actualizar() {
         modelo.clear();
         List<Contacto> list = agenda.obtenerContactos();
-        list.sort((a,b)-> { int c = a.getNombre().compareToIgnoreCase(b.getNombre()); return c!=0?c:a.getApellido().compareToIgnoreCase(b.getApellido()); });
+        list.sort((a,b)-> {
+            int c = a.getNombre().compareToIgnoreCase(b.getNombre());
+            return c != 0 ? c : a.getApellido().compareToIgnoreCase(b.getApellido());
+        });
         for (Contacto c : list) modelo.addElement(c);
     }
 
     private void limpiar() {
-        tfNombre.setText("");
-        tfApellido.setText("");
-        tfTelefono.setText("");
-        tfNuevo.setText("");
+        tfNombre.setText(""); tfApellido.setText(""); tfTelefono.setText("");
     }
 
     public static void main(String[] args) {
