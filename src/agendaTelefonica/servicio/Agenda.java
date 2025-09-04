@@ -8,37 +8,37 @@ import java.util.List;
 import agendaTelefonica.modelo.Contacto;
 
 public class Agenda {
+    // Lista que almacena los contactos registrados
     private List<Contacto> contactos;
+
+    // Capacidad máxima de la agenda
     private int maxSize;
+
+    // Tamaño por defecto si no se especifica
     private static final int DEFAULT_SIZE = 10;
 
-    // Constructor con tamaño por defecto
+    // Constructor que inicializa la agenda con tamaño por defecto
     public Agenda() {
         this.contactos = new ArrayList<>();
         this.maxSize = DEFAULT_SIZE;
     }
 
-    // Constructor con tamaño definido
+    // Constructor que permite definir el tamaño máximo de la agenda
     public Agenda(int maxSize) {
         this.contactos = new ArrayList<>();
         this.maxSize = maxSize;
     }
 
-    // Métodos a implementar
+    /**
+     * Añade un nuevo contacto a la agenda si no hay duplicados y hay espacio disponible.
+     * Retorna un mensaje indicando el resultado de la operación.
+     */
+    public String anadirContacto(Contacto c) {
+        if (c == null) return "No se puede añadir: el contacto es nulo.";
 
-    public void anadirContacto(Contacto c) {
-        if (c == null) {
-            System.out.println("No se puede añadir: el contacto es nulo.");
-            return;
-        }
+        if (espaciosLibres() == 0) return "No se puede añadir el contacto: la agenda está llena.";
 
-        // 1. Verificar si la agenda está llena
-        if (espaciosLibres() == 0) {
-            System.out.println("No se puede añadir el contacto: la agenda está llena.");
-            return;
-        }
-
-        // 2. Validar duplicados (nombre+apellido o teléfono repetido)
+        // Verifica duplicados por nombre+apellido o por número de teléfono
         for (Contacto existente : contactos) {
             boolean mismoNombreApellido = Contacto.normalizarTexto(existente.getNombre())
                     .equals(Contacto.normalizarTexto(c.getNombre())) &&
@@ -47,22 +47,17 @@ public class Agenda {
 
             boolean mismoTelefono = existente.getTelefono().equals(c.getTelefono());
 
-            if (mismoNombreApellido) {
-                System.out.println("No se puede añadir: ya existe un contacto con el mismo nombre y apellido.");
-                return;
-            }
-
-            if (mismoTelefono) {
-                System.out.println("No se puede añadir: ya existe un contacto con el mismo número de teléfono.");
-                return;
-            }
+            if (mismoNombreApellido) return "Ya existe un contacto con el mismo nombre y apellido.";
+            if (mismoTelefono) return "Ya existe un contacto con el mismo número de teléfono.";
         }
 
-        // 3. Si todo bien → añadir
         contactos.add(c);
-        System.out.println("Contacto añadido correctamente.");
+        return "OK";
     }
 
+    /**
+     * Verifica si existe un contacto con nombre, apellido y teléfono exactos.
+     */
     public boolean existeContacto(String nombre, String apellido, String telefono) {
         if (nombre == null || apellido == null || telefono == null) return false;
 
@@ -80,12 +75,16 @@ public class Agenda {
         return false;
     }
 
+    /**
+     * Muestra todos los contactos ordenados alfabéticamente por nombre y apellido.
+     */
     public void listarContactos() {
         if (contactos.isEmpty()) {
             System.out.println("La agenda no tiene contactos.");
             return;
         }
 
+        // Ordena los contactos por nombre y luego por apellido, ignorando mayúsculas
         contactos.sort(
                 Comparator.comparing((Contacto c) -> c.getNombre().trim(), String.CASE_INSENSITIVE_ORDER)
                         .thenComparing(c -> c.getApellido().trim(), String.CASE_INSENSITIVE_ORDER)
@@ -100,18 +99,24 @@ public class Agenda {
         }
     }
 
+    /**
+     * Busca contactos por nombre, apellido o teléfono.
+     * Muestra los resultados en consola.
+     */
     public void buscarContacto(String campo, String valor) {
         if (valor == null || valor.trim().isEmpty()) {
             System.out.println("Debe ingresar un valor para buscar.");
             return;
         }
 
+        // Normaliza el valor según el campo
         String vNorm = "telefono".equalsIgnoreCase(campo)
                 ? valor.trim()
                 : Contacto.normalizarTexto(valor);
 
         List<Contacto> resultados = new ArrayList<>();
 
+        // Filtra contactos según el campo especificado
         for (Contacto c : contactos) {
             if ("nombre".equalsIgnoreCase(campo)) {
                 if (Contacto.normalizarTexto(c.getNombre()).equals(vNorm)) resultados.add(c);
@@ -125,6 +130,7 @@ public class Agenda {
             }
         }
 
+        // Muestra resultados o mensaje si no se encontró nada
         if (resultados.isEmpty()) {
             System.out.println("No se encontraron contactos para ese criterio.");
         } else {
@@ -135,10 +141,14 @@ public class Agenda {
         }
     }
 
+    /**
+     * Elimina un contacto que coincida con el nombre y apellido proporcionados.
+     */
     public void eliminarContacto(String nombre, String apellido) {
         String nombreLimpio = Contacto.normalizarTexto(nombre);
         String apellidoLimpio = Contacto.normalizarTexto(apellido);
 
+        // Se crea una copia para evitar errores al modificar la lista mientras se recorre
         for (Contacto actual : new ArrayList<>(contactos)) {
             if (Contacto.normalizarTexto(actual.getNombre()).equals(nombreLimpio) &&
                     Contacto.normalizarTexto(actual.getApellido()).equals(apellidoLimpio)) {
@@ -150,6 +160,9 @@ public class Agenda {
         System.out.println("El contacto no existe en la agenda.");
     }
 
+    /**
+     * Modifica el número de teléfono de un contacto si no está duplicado y es válido.
+     */
     public void modificarTelefono(String nombre, String apellido, String nuevoTelefono) {
         if (nombre == null || apellido == null) {
             System.out.println("Nombre y apellido requeridos para modificar teléfono.");
@@ -165,12 +178,13 @@ public class Agenda {
 
             if (nombreActual.equals(nombreLimpio) && apellidoActual.equals(apellidoLimpio)) {
 
+                // Validación básica del formato del teléfono
                 if (nuevoTelefono == null || !nuevoTelefono.trim().matches("\\d{7,15}")) {
                     System.out.println("Teléfono inválido: debe contener sólo números (7-15 dígitos).");
                     return;
                 }
 
-                // Verificar que no se repita el teléfono
+                // Verifica que el nuevo número no esté asignado a otro contacto
                 for (Contacto existente : contactos) {
                     if (existente != actual && existente.getTelefono().equals(nuevoTelefono.trim())) {
                         System.out.println("Ese número ya está asignado a otro contacto.");
@@ -186,15 +200,24 @@ public class Agenda {
         System.out.println("No se encontró el contacto para modificar.");
     }
 
+    /**
+     * Indica si la agenda está llena.
+     */
     public boolean agendaLlena() {
         return espaciosLibres() == 0;
     }
 
+    /**
+     * Devuelve la cantidad de espacios disponibles en la agenda.
+     */
     public int espaciosLibres() {
         return maxSize - contactos.size();
     }
 
-    public java.util.List<Contacto> obtenerContactos() {
-        return new java.util.ArrayList<>(this.contactos);
+    /**
+     * Devuelve una copia de la lista de contactos para evitar modificaciones externas.
+     */
+    public List<Contacto> obtenerContactos() {
+        return new ArrayList<>(this.contactos);
     }
 }

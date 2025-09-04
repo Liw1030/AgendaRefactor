@@ -3,12 +3,20 @@ package agendaTelefonica.modelo;
 import java.text.Normalizer;
 import java.util.Objects;
 
+/**
+ * Clase que representa un contacto dentro de la agenda telefónica.
+ * Contiene nombre, apellido y número de teléfono, con validaciones integradas.
+ */
 public class Contacto {
     private String nombre;
     private String apellido;
     private String telefono;
 
-    // Constructor
+    /**
+     * Constructor que inicializa un contacto con nombre, apellido y teléfono.
+     * Realiza validaciones para asegurar que los campos no estén vacíos
+     * y que el teléfono tenga un formato válido (solo dígitos, entre 7 y 15).
+     */
     public Contacto(String nombre, String apellido, String telefono) {
         if (nombre == null || nombre.trim().isEmpty())
             throw new IllegalArgumentException("El nombre no puede estar vacío.");
@@ -22,14 +30,14 @@ public class Contacto {
         this.telefono = telefono.trim();
     }
 
+    // Métodos getter y setter para acceder y modificar los atributos del contacto
 
-
-    // Getters y Setters para leer o modificar los datos :3
     public String getNombre() {
         return nombre;
     }
 
     public void setNombre(String nombre) {
+        // Si el nombre es nulo, se asigna una cadena vacía para evitar errores
         this.nombre = nombre == null ? "" : nombre.trim();
     }
 
@@ -45,6 +53,10 @@ public class Contacto {
         return telefono;
     }
 
+    /**
+     * Setter que valida el nuevo número antes de asignarlo.
+     * Solo se aceptan números entre 7 y 15 dígitos.
+     */
     public void setTelefono(String telefono) {
         if (telefono == null || !telefono.trim().matches("\\d{7,15}")) {
             throw new IllegalArgumentException("Teléfono inválido: debe contener sólo números (7-15 dígitos).");
@@ -53,8 +65,9 @@ public class Contacto {
     }
 
     /**
-     Sobreescribimos equals para que dos contactos sean iguales
-     si tienen el mismo nombre y apellido (ignorando mayúsculas/minúsculas).
+     * Sobrescribe el método equals para comparar contactos.
+     * Dos contactos se consideran iguales si tienen el mismo nombre, apellido y teléfono,
+     * ignorando acentos, mayúsculas y espacios.
      */
     @Override
     public boolean equals(Object o) {
@@ -67,8 +80,8 @@ public class Contacto {
     }
 
     /**
-     Siempre que sobrescribimos equals, es recomendable sobrescribir hashCode.
-     Así evitamos inconsistencias al usar estructuras como HashSet o HashMap.
+     * Sobrescribe hashCode para mantener coherencia con equals.
+     * Esto es esencial para que los contactos funcionen correctamente en colecciones como HashSet o HashMap.
      */
     @Override
     public int hashCode() {
@@ -79,14 +92,22 @@ public class Contacto {
         );
     }
 
+    /**
+     * Método utilitario que normaliza texto eliminando acentos,
+     * convirtiendo a minúsculas y eliminando espacios.
+     * Se usa para comparar nombres y apellidos de forma robusta.
+     */
     public static String normalizarTexto(String texto) {
         if (texto == null) return "";
         return Normalizer.normalize(texto, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "")
+                .replaceAll("\\p{M}", "") // Elimina marcas diacríticas (acentos)
                 .toLowerCase()
                 .trim();
     }
 
+    /**
+     * Representación en texto del contacto, útil para mostrar en consola o interfaz.
+     */
     @Override
     public String toString() {
         return nombre + " " + apellido + " - " + telefono;
